@@ -1,0 +1,18 @@
+{
+  "name": "goal_setting_app_tutorial",
+  "version": "1.0.0",
+  "description": "here is the goal setting project from youtube",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "nodemon server.js"
+  },
+  "author": "Kaung Si Thu",
+  "license": "ISC",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "mongoose": "^8.0.3"
+  }
+}
