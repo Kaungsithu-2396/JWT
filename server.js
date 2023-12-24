@@ -4,7 +4,9 @@ dotenv.config({ path: "../.env" });
 const goal_router = require("./routes/goalRoutes");
 const port = process.env.PORT || 3000;
 const errorHandler = require("../backend/middlewares/errorHandlerMiddleware");
-
+const connectDB = require("./config/db_conn");
+//db connection
+connectDB();
 //initialize express
 const app = express();
 
