@@ -2,6 +2,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../Model/userModel");
 const asyncHandler = require("express-async-handler");
+
 //@desc RegisterUser
 //@route POST /api/users
 //@access Public
@@ -9,26 +10,24 @@ const registerUser = asyncHandler(async (req, resp) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         resp.status(400);
-        throw new Error("Please fill the required text field");
+        throw new Error("Please fill the required field");
     }
     const isExisitingUser = await User.findOne({ email });
-    if (isExisitingUser) {
-        resp.status(400);
-        throw new Error("User already exisits");
-    }
-    //hash Password since it's confedential
+    //hash password so that no security risk occur
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, salt);
     const newUser = await User.create({ name, email, password: hashPassword });
-    resp.status(201).send({
-        message: "user create success",
-        data: {
-            _id: newUser.id,
-            name: newUser.name,
-            email: newUser.email,
+    if (isExisitingUser) {
+        resp.status(400);
+        throw new Error("user already exisits");
+    } else {
+        resp.status(201).send({
+            message: "user registration success",
+            authenticate: true,
+            user: newUser,
             token: generateToken(newUser.id),
-        },
-    });
+        });
+    }
 });
 //@desc Authenticate User
 //@route POST /api/users/login
@@ -37,25 +36,21 @@ const loginUser = asyncHandler(async (req, resp) => {
     const { email, password } = req.body;
     if (!email || !password) {
         resp.status(400);
-        throw new Error(
-            "Please fill the required data for authentication process"
-        );
+        throw new Error("Please fill the required data to authenticate");
     }
-    const findUser = await User.findOne({ email });
-    if (findUser && (await bcrypt.compare(password, findUser.password))) {
+    const isUserExisit = await User.findOne({ email });
+    if (
+        isUserExisit &&
+        (await bcrypt.compare(password, isUserExisit.password))
+    ) {
         resp.status(201).send({
-            message: "Authenticated user",
-            data: {
-                _id: findUser.id,
-                name: findUser.name,
-                email: findUser.email,
-                token: generateToken(findUser.id),
-            },
+            authenticate: true,
+            data: isUserExisit,
+            token: generateToken(isUserExisit.id),
         });
     } else {
-        resp.status(400).send({
-            message: "Invalid User",
-        });
+        resp.status(400);
+        throw new Error("Invalid user");
     }
 });
 //@desc Get Current Login User Data
@@ -63,13 +58,12 @@ const loginUser = asyncHandler(async (req, resp) => {
 //@access Private
 const getCurrentUser = asyncHandler(async (req, resp) => {
     resp.send({
-        message: "current user data",
+        message: req.user,
     });
 });
-
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET_KEY, {
-        expiresIn: "10d",
+        expiresIn: "3d",
     });
 };
 module.exports = {
