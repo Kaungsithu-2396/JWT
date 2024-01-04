@@ -10,24 +10,25 @@ const registerUser = asyncHandler(async (req, resp) => {
     const { name, email, password } = req.body;
     if (!name || !email || !password) {
         resp.status(400);
-        throw new Error("Please fill the required field");
+        throw new Error("Please fill all the required field");
     }
-    const isExisitingUser = await User.findOne({ email });
-    //hash password so that no security risk occur
+    const isUserExisit = await User.findOne({ email });
+    if (isUserExisit) {
+        resp.status(400);
+        throw new Error("User already exisits");
+    }
     const salt = await bcrypt.genSalt(10);
     const hashPassword = await bcrypt.hash(password, salt);
     const newUser = await User.create({ name, email, password: hashPassword });
-    if (isExisitingUser) {
-        resp.status(400);
-        throw new Error("user already exisits");
-    } else {
-        resp.status(201).send({
-            message: "user registration success",
-            authenticate: true,
-            user: newUser,
+    resp.status(201).send({
+        message: "success",
+        data: {
+            id: newUser.id,
+            name: newUser.name,
+            email: newUser.email,
             token: generateToken(newUser.id),
-        });
-    }
+        },
+    });
 });
 //@desc Authenticate User
 //@route POST /api/users/login
@@ -36,20 +37,20 @@ const loginUser = asyncHandler(async (req, resp) => {
     const { email, password } = req.body;
     if (!email || !password) {
         resp.status(400);
-        throw new Error("Please fill the required data to authenticate");
+        throw new Error("please fill the required fields to authenticate");
     }
-    const isUserExisit = await User.findOne({ email });
+    const isExisitingUser = await User.findOne({ email });
     if (
-        isUserExisit &&
-        (await bcrypt.compare(password, isUserExisit.password))
+        isExisitingUser &&
+        (await bcrypt.compare(password, isExisitingUser.password))
     ) {
         resp.status(201).send({
-            authenticate: true,
-            data: isUserExisit,
-            token: generateToken(isUserExisit.id),
+            message: "authenticated",
+            data: isExisitingUser,
+            token: generateToken(isExisitingUser.id),
         });
     } else {
-        resp.status(400);
+        resp.status(401);
         throw new Error("Invalid user");
     }
 });
@@ -63,7 +64,7 @@ const getCurrentUser = asyncHandler(async (req, resp) => {
 });
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET_KEY, {
-        expiresIn: "3d",
+        expiresIn: "2d",
     });
 };
 module.exports = {

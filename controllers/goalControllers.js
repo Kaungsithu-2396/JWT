@@ -1,10 +1,11 @@
 const goalModel = require("../Model/goalModel");
 const asyncHandler = require("express-async-handler");
+const userModel = require("../Model/userModel");
 // @desc Get Goals
 // @route GET /api/goals
 // @access Private
 const getGoals = asyncHandler(async (req, resp) => {
-    const goals = await goalModel.find();
+    const goals = await goalModel.find({ user: req.user.id });
     resp.status(200).json({
         count: goals.length,
         message: "Get goals",
@@ -20,7 +21,10 @@ const addGoal = asyncHandler(async (req, resp) => {
         resp.status(400);
         throw new Error("Please fill the text");
     }
-    const goal = await goalModel.create({ text: req.body.text });
+    const goal = await goalModel.create({
+        text: req.body.text,
+        user: req.user.id,
+    });
     resp.status(201).json({
         count: goal.length,
         data: goal,
@@ -32,18 +36,28 @@ const addGoal = asyncHandler(async (req, resp) => {
 // @access Private
 const updateGoal = asyncHandler(async (req, resp) => {
     const { id } = req.params;
-    const goal = await goalModel.findByIdAndUpdate(
-        id,
-        { text: req.body.text },
-        { new: true }
-    );
+    const goal = await goalModel.findById(id);
     if (!goal) {
         resp.status(400);
         throw new Error("No data found");
     }
+    const user = await userModel.findById(req.user.id);
+    if (!user) {
+        resp.status(401);
+        throw new Error("no user found");
+    }
+    if (goal.user.toString() !== user.id) {
+        resp.status(401);
+        throw new Error("Unauthorized user");
+    }
+    console.log(req);
+
+    const updateGoal = await goalModel.findByIdAndUpdate(id, req.body, {
+        new: true,
+    });
     resp.status(200).json({
         message: "success",
-        data: goal,
+        data: updateGoal,
     });
 });
 // @desc Delete Goals
@@ -51,11 +65,21 @@ const updateGoal = asyncHandler(async (req, resp) => {
 // @access Private
 const deleteGoal = asyncHandler(async (req, resp) => {
     const { id } = req.params;
-    const delGoal = await goalModel.findByIdAndDelete(id);
+    const delGoal = await goalModel.findById(id);
     if (!delGoal) {
         resp.status(400);
-        throw new Error("wrong ");
+        throw new Error("No text found");
     }
+    const user = await userModel.findById(req.user.id);
+    if (!user) {
+        resp.status(401);
+        throw new Error("no user found");
+    }
+    if (delGoal.user.toString() !== user.id) {
+        resp.status(401);
+        throw new Error("unauthorized user");
+    }
+    await goalModel.findByIdAndDelete(id);
 
     resp.status(200).json({
         message: `delete goal ${id}`,
