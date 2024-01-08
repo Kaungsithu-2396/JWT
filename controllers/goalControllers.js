@@ -50,8 +50,6 @@ const updateGoal = asyncHandler(async (req, resp) => {
         resp.status(401);
         throw new Error("Unauthorized user");
     }
-    console.log(req);
-
     const updateGoal = await goalModel.findByIdAndUpdate(id, req.body, {
         new: true,
     });
